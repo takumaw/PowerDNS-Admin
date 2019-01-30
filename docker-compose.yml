@@ -14,14 +14,7 @@ services:
     ports:
       - "9191:9191"
     volumes:
-      # Code
-      - .:/powerdns-admin/
-      - "./configs/${ENVIRONMENT}.py:/powerdns-admin/config.py"
-      # Assets dir volume
-      - powerdns-admin-assets:/powerdns-admin/app/static
-      - powerdns-admin-assets2:/powerdns-admin/node_modules
-      - powerdns-admin-assets3:/powerdns-admin/logs
-      - ./app/static/custom:/powerdns-admin/app/static/custom
+      - powerdns-admin-data:/powerdns-admin/logs
     logging:
       driver: json-file
       options:
@@ -37,7 +30,6 @@ services:
       - PDA_DB_PORT=${PDA_DB_PORT}
       - PDNS_HOST=${PDNS_HOST}
       - PDNS_API_KEY=${PDNS_API_KEY}
-      - FLASK_APP=/powerdns-admin/app/__init__.py
     depends_on:
       powerdns-admin-mysql:
         condition: service_healthy
@@ -106,9 +98,7 @@ services:
 networks:
   default:
 
-volumes:
+    volumes:
   powerdns-mysql-data:
   powerdns-admin-mysql-data:
-  powerdns-admin-assets:
-  powerdns-admin-assets2:
-  powerdns-admin-assets3:
+  powerdns-admin-data:

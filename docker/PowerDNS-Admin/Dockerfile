@@ -1,49 +1,47 @@
-FROM ubuntu:16.04
-MAINTAINER Khanh Ngo "k@ndk.name"
+FROM node:10 as node-builder
+
+COPY package.json .yarnrc /powerdns-admin/
+
+RUN set -ex \
+    && cd /powerdns-admin \
+    && yarn install
+
+
+FROM python:3.5
+
 ARG ENVIRONMENT=development
-ENV ENVIRONMENT=${ENVIRONMENT}
+ENV FLASK_APP=/powerdns-admin/app/__init__.py
 
 WORKDIR /powerdns-admin
 
-RUN apt-get update -y
-RUN apt-get install -y apt-transport-https
+COPY . /powerdns-admin/
+COPY --from=node-builder /powerdns-admin/app/static/node_modules /powerdns-admin/app/static/node_modules
 
-RUN apt-get install -y locales locales-all
-ENV LC_ALL en_US.UTF-8
-ENV LANG en_US.UTF-8
-ENV LANGUAGE en_US.UTF-8
+RUN set -ex \
+	&& apt-get update && apt-get install -y --no-install-recommends \
+        libffi-dev \
+        libldap2-dev \
+        libsasl2-dev \
+        libssl-dev \
+        libxml2-dev \
+        libxmlsec1-dev \
+        libxslt1-dev \
+        mysql-client \
+        netcat \
+        supervisor \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip3 install -r requirements.txt \
+    && mkdir -p logs \
+    && cp configs/${ENVIRONMENT}.py /powerdns-admin/config.py \
+    && flask assets build \
+    && chown -R www-data:www-data \
+        app/static \
+        logs \
+    && mv supervisord.conf /etc/supervisord.conf \
+    && mv docker/entrypoint.sh /entrypoint.sh \
+    && rm -rf \
+        .git
 
-RUN apt-get install -y python3-pip python3-dev supervisor curl mysql-client
-
-# Install node 10.x
-RUN curl -sL https://deb.nodesource.com/setup_10.x | bash -
-RUN apt-get install -y nodejs
-
-RUN curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add -
-RUN echo "deb https://dl.yarnpkg.com/debian/ stable main" > /etc/apt/sources.list.d/yarn.list
-
-# Install yarn
-RUN apt-get update -y
-RUN apt-get install -y yarn
-
-# Install Netcat for DB healthcheck
-RUN apt-get install -y netcat
-
-# lib for building mysql db driver
-RUN apt-get install -y libmysqlclient-dev
-
-# lib for building ldap and ssl-based application
-RUN apt-get install -y libsasl2-dev libldap2-dev libssl-dev
-
-# lib for building python3-saml
-RUN apt-get install -y libxml2-dev libxslt1-dev libxmlsec1-dev libffi-dev pkg-config
-
-COPY ./requirements.txt /powerdns-admin/requirements.txt
-RUN pip3 install -r requirements.txt
-
-ADD ./supervisord.conf /etc/supervisord.conf
-ADD . /powerdns-admin/
-COPY ./configs/${ENVIRONMENT}.py /powerdns-admin/config.py
-COPY ./docker/PowerDNS-Admin/entrypoint.sh /entrypoint.sh
+VOLUME /powerdns-admin/logs
 
 ENTRYPOINT ["/entrypoint.sh"]

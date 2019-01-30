@@ -56,16 +56,8 @@ mysql -h${PDA_DB_HOST} -u${PDA_DB_USER} -p${PDA_DB_PASSWORD} -P${PDA_DB_PORT} ${
 mysql -h${PDA_DB_HOST} -u${PDA_DB_USER} -p${PDA_DB_PASSWORD} -P${PDA_DB_PORT} ${PDA_DB_NAME} -e "UPDATE setting SET value='${PDNS_PROTO}://${PDNS_HOST}:${PDNS_PORT}' WHERE name='pdns_api_url';"
 mysql -h${PDA_DB_HOST} -u${PDA_DB_USER} -p${PDA_DB_PASSWORD} -P${PDA_DB_PORT} ${PDA_DB_NAME} -e "UPDATE setting SET value='${PDNS_API_KEY}' WHERE name='pdns_api_key';"
 
-echo "===> Assets management"
-echo "---> Running Yarn"
-chown -R www-data:www-data /powerdns-admin/app/static
-chown -R www-data:www-data /powerdns-admin/node_modules
-su -s /bin/bash -c 'yarn install --pure-lockfile' www-data
-
-echo "---> Running Flask assets"
+echo "===> Changing permissions"
 chown -R www-data:www-data /powerdns-admin/logs
-su -s /bin/bash -c 'flask assets build' www-data
-
 
 echo "===> Start supervisor"
 /usr/bin/supervisord -c /etc/supervisord.conf
